@@ -6,6 +6,9 @@ on:
 jobs:
   tag-and-bump:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout main
         uses: actions/checkout@v3
@@ -15,8 +18,12 @@ jobs:
       - name: Get current version
         id: get_version
         run: |
-          current_version=$(grep 'let PackageVersion' Sources/SignalRClient/Version.swift | sed 's/.*"//;s/".*//')
+          current_version=$(grep 'let PackageVersion' Sources/SignalRClient/Version.swift | sed -n 's/.*let PackageVersion *= *"\([^"]*\)".*/\1/p')
           echo "Current Version: $current_version"
+          if [ -z "$current_version" ]; then
+            echo "Error: current_version is empty. Exiting."
+            exit 1
+          fi
           echo "current_version=$current_version" >> "$GITHUB_OUTPUT"
 
       - name: Get next version
@@ -38,11 +45,18 @@ jobs:
       
       - name: Tag and release
         run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch --tags
           version=${{ steps.get_version.outputs.current_version }}
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "v$version"
-          git push origin "v$version"
+          TAG="v$version"
+          if git rev-parse "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists. Skipping tag and release."
+          else  
+            git tag "$TAG"
+            git push origin "$TAG"
+            echo "Released $TAG"
+          fi
 
       - name: Create a branch for bumping version
         id: create_branch
@@ -50,17 +64,25 @@ jobs:
           next=${{ steps.calc_next.outputs.next_version }}
           branch="bump-version-$next"
           echo "branch_name=$branch" >> $GITHUB_OUTPUT
-          git checkout -b "$branch"
-          sed -i "s/\(let PackageVersion = \"\).*\(\"\)/\1$next\2/" Sources/SignalRClient/Version.swift
-          git add Sources/SignalRClient/Version.swift
-          git commit -m "Bump version to $next"
-          git push origin "$branch"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "Branch $branch already exists. Skipping creating branch."
+          else
+            sed -i "s/\(let PackageVersion = \"\).*\(\"\)/\1$next\2/" Sources/SignalRClient/Version.swift
+          fi
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v4
+        id: cpr
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{ steps.create_branch.outputs.branch_name }}
+          delete-branch: true
           title: "Bump version to ${{ steps.calc_next.outputs.next_version }}"
           commit-message: "Bump version to ${{ steps.calc_next.outputs.next_version }}"
           body: "Bump version to ${{ steps.calc_next.outputs.next_version }} after release"
+
+      - name: Check outputs
+        if: ${{ steps.cpr.outputs.pull-request-number }}
+        run: |
+          echo "Pull Request Number - ${{ steps.cpr.outputs.pull-request-number }}"
+          echo "Pull Request URL - ${{ steps.cpr.outputs.pull-request-url }}"
