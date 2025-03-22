@@ -48,6 +48,14 @@ public class HubConnectionBuilder {
         self.url = url
         return self
     }
+  
+    public func withUrl(url: String, httpConnectionOptions: HttpConnectionOptions) -> HubConnectionBuilder {
+      self.url = url
+      self.httpConnectionOptions = httpConnectionOptions
+      return self
+    }
+
+  
 
     public func withUrl(url: String, transport: HttpTransportType) -> HubConnectionBuilder {
         self.url = url
