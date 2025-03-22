@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 import Foundation
 #if canImport(FoundationNetworking)
     import FoundationNetworking
@@ -422,10 +425,7 @@ actor HttpConnection: ConnectionProtocol {
         // We should not call onclose again
         if connectionStartedSuccessfully {
             connectionStartedSuccessfully = false
-            Task { [weak self] () in 
-                guard let self = self else { return }
                 await self.onClose?(error)
-            }
         }
     }
 
