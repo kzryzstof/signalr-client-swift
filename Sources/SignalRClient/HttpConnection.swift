@@ -18,7 +18,7 @@ private enum ConnectionState: String {
 public struct HttpConnectionOptions {
     var logHandler: LogHandler?
     var logLevel: LogLevel = .information
-    var accessTokenFactory: (@Sendable () async throws -> String?)?
+    public var accessTokenFactory: (@Sendable () async throws -> String?)?
     var httpClient: HttpClient?
     var transport: HttpTransportType?
     var skipNegotiation: Bool
@@ -30,7 +30,7 @@ public struct HttpConnectionOptions {
     var eventSource: EventSourceAdaptor?
     var useStatefulReconnect: Bool?
 
-    init() {
+    public init() {
         self.skipNegotiation = false
     }
 }
