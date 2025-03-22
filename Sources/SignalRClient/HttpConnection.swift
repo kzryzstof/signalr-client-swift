@@ -12,7 +12,7 @@ private enum ConnectionState: String {
     case disconnecting = "Disconnecting"
 }
 
-struct HttpConnectionOptions {
+public struct HttpConnectionOptions {
     var logHandler: LogHandler?
     var logLevel: LogLevel = .information
     var accessTokenFactory: (@Sendable () async throws -> String?)?
