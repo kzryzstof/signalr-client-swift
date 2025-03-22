@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 import Foundation
 
 actor LongPollingTransport: Transport {
@@ -163,6 +166,7 @@ actor LongPollingTransport: Transport {
         logger.log(
             level: .debug, message: "(LongPolling transport) Stopping polling."
         )
+        let triggerClose = self.running
         self.running = false
         self.receiving?.cancel()
 
@@ -208,8 +212,10 @@ actor LongPollingTransport: Transport {
         logger.log(
             level: .debug, message: "(LongPolling transport) Stop finished."
         )
-
-        await raiseClose()
+        
+        if(triggerClose){
+            await raiseClose()
+        }
     }
 
     func onReceive(_ handler: OnReceiveHandler?) {
@@ -224,7 +230,7 @@ actor LongPollingTransport: Transport {
         guard let onCloseHandler = self.onCloseHandler else {
             return
         }
-
+        self.onCloseHandler = nil
         logger.log(
             level: .debug,
             message:
